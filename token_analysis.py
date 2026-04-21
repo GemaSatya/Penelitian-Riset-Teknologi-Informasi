@@ -684,3 +684,103 @@ print(f"  Reduksi CoT → Latent : {reduction_cot_lat:.2f}%")
 print("=" * 50)
 print("SELESAI ✓")
 
+# =========================================
+# 13. TABLE SUMMARY (PAPER READY)
+# =========================================
+
+summary_table = pd.DataFrame({
+    "Method": ["No CoT", "Full CoT", "Latent CoT"],
+    "Avg Tokens": [no_cot_mean, cot_mean, latent_mean],
+    "Median": [
+        results["no_cot"]["median"],
+        results["cot"]["median"],
+        results["latent_cot"]["median"]
+    ],
+    "Min": [
+        results["no_cot"]["min"],
+        results["cot"]["min"],
+        results["latent_cot"]["min"]
+    ],
+    "Max": [
+        results["no_cot"]["max"],
+        results["cot"]["max"],
+        results["latent_cot"]["max"]
+    ]
+})
+
+print("\n=== TABLE SUMMARY ===")
+print(summary_table)
+
+summary_table.to_csv("summary_table.csv", index=False)
+print("Tabel disimpan: summary_table.csv")
+
+# =========================================
+# 14. TOKEN SAVING VISUALIZATION
+# =========================================
+
+methods = ["Full CoT", "Latent CoT"]
+tokens = [cot_mean, latent_mean]
+
+plt.figure()
+
+bars = plt.bar(methods, tokens)
+
+for bar in bars:
+    yval = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2, yval,
+             f"{yval:.1f}", ha='center', va='bottom')
+
+plt.title("Token Usage Reduction (CoT vs Latent CoT)")
+plt.xlabel("Method")
+plt.ylabel("Average Tokens")
+
+# Tambahin anotasi penghematan
+plt.annotate(
+    f"-{reduction_cot_lat:.1f}%",
+    xy=(1, latent_mean),
+    xytext=(0.5, (cot_mean + latent_mean)/2),
+    arrowprops=dict(arrowstyle="->"),
+)
+
+plt.savefig("token_reduction_main.png")
+plt.show()
+
+print("Grafik utama disimpan: token_reduction_main.png")
+
+# =========================================
+# 15. CUMULATIVE DISTRIBUTION (CDF)
+# =========================================
+
+import numpy as np
+
+def plot_cdf(data, label):
+    sorted_data = np.sort(data)
+    yvals = np.arange(len(sorted_data)) / float(len(sorted_data))
+    plt.plot(sorted_data, yvals, label=label)
+
+plt.figure()
+
+plot_cdf(results["no_cot"]["series"], "No CoT")
+plot_cdf(results["cot"]["series"], "Full CoT")
+plot_cdf(results["latent_cot"]["series"], "Latent CoT")
+
+plt.title("Cumulative Distribution of Token Usage")
+plt.xlabel("Tokens")
+plt.ylabel("CDF")
+plt.legend()
+
+plt.savefig("cdf_tokens.png")
+plt.show()
+
+print("CDF disimpan: cdf_tokens.png")
+
+# Efisiensi total token (bukan rata-rata)
+total_cot = results["cot"]["series"].sum()
+total_latent = results["latent_cot"]["series"].sum()
+
+total_reduction = ((total_cot - total_latent) / total_cot) * 100
+
+print("\n=== TOTAL TOKEN ANALYSIS ===")
+print(f"Total CoT Token     : {total_cot}")
+print(f"Total Latent Token  : {total_latent}")
+print(f"Total Reduction     : {total_reduction:.2f}%")
